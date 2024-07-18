@@ -1,92 +1,82 @@
 package route
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
-	"github.com/tanakrid/accounting/transaction"
 	"github.com/google/uuid"
 	"github.com/labstack/echo"
+	"github.com/tanakrid/accounting/transaction"
 )
 
-func transactionHandler(w http.ResponseWriter, req *http.Request) {
-	switch req.Method {
-		case "POST":
-			body, err := io.ReadAll(req.Body)
-			if err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				fmt.Fprintf(w, "error: %v", err)
-				return
-			}
+func postTransaction(c echo.Context) error {
+	record := &transaction.Record{}
+	if err := c.Bind(record); err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+	transaction.Add(uuid.New().String(), *record)
+	return c.JSON(http.StatusCreated, nil)
+}
 
-			record := transaction.Record{}
-			err = json.Unmarshal(body, &record)
-			if err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				fmt.Fprintf(w, "error: %v", err)
-				return
-			}
+func getTransaction(c echo.Context) error {
+	return c.JSON(http.StatusOK, transaction.Show())
+}
 
-			transaction.Add(uuid.New().String(), record)
-			w.WriteHeader(http.StatusOK)
-			return
-		case "GET":
-			b, err := json.Marshal(transaction.Show())
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprintf(w, "error: %v", err)
-				return
-			}
-			w.WriteHeader(http.StatusOK)
-			w.Header().Set("Content-Type", "application/json; charset=utf-8")
-			w.Write(b)
-
-		case "PUT":
-			body, err := io.ReadAll(req.Body)
-			if err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				fmt.Fprintf(w, "error: %v", err)
-				return
-			}
-
-			id := req.URL.Query().Get("id")
-			fmt.Println("id =>", id)
-
-			record := transaction.Record{}
-			err = json.Unmarshal(body, &record)
-			if err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				fmt.Fprintf(w, "error: %v", err)
-				return
-			}
-
-			transaction.Edit(id, record)
-			w.WriteHeader(http.StatusOK)
-			return
-		case "DELETE":
-			id := req.URL.Query().Get("id")
-			fmt.Println("id =>", id)
-			transaction.Del(id)
-			w.WriteHeader(http.StatusOK)
-			return
+func getTransactionById(c echo.Context) error {
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusBadRequest, "Can't find id path param")
+	}
+	records := transaction.Show()
+	record, has := records[id]
+	if has {
+		return c.JSON(http.StatusOK, record)
+	} else {
+		return c.JSON(http.StatusNotFound, "Not has this id:"+id)
 	}
 }
 
-func reportHandler(w http.ResponseWriter, req *http.Request) {
+func putTransaction(c echo.Context) error {
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusBadRequest, "Can't find id path param")
+	}
+	if _, has := transaction.Show()[id]; !has {
+		return c.JSON(http.StatusNotFound, "Can't edit, Not found this id:"+id)
+	}
 
+	record := &transaction.Record{}
+	fmt.Printf("record's value: %v\n", record) // test value
+	if err := c.Bind(record); err != nil {
+		return c.JSON(http.StatusBadRequest, err.Error())
+	}
+	transaction.Edit(id, *record)
+	return c.JSON(http.StatusOK, nil)
 }
 
-func filterHandler(w http.ResponseWriter, req *http.Request) {
-
+func deleteTransaction(c echo.Context) error {
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusBadRequest, "Can't find id path param")
+	}
+	if _, has := transaction.Show()[id]; !has {
+		return c.JSON(http.StatusNotFound, "Can't delete, Not found this id:"+id)
+	}
+	transaction.Del(id)
+	return c.JSON(http.StatusOK, nil)
 }
+
 func InitRoute() {
 	fmt.Println("init route and start service")
-	http.HandleFunc("/transaction", transactionHandler)
-	http.HandleFunc("/report", reportHandler)
-	http.HandleFunc("/filter", filterHandler)
+	port := "4444"
+	e := echo.New()
 
-	err := http.ListenAndServe("localhost:4444", nil)
-	log.Fatal(err)
+	e.GET("/transaction", getTransaction)
+	e.GET("/transaction/:id", getTransactionById)
+	e.POST("/transaction", postTransaction)
+	e.DELETE("/transaction/:id", deleteTransaction)
+	e.PUT("/transaction/:id", putTransaction)
+
+	log.Println("starting... port:", port)
+	log.Fatal(e.Start(":"+port))
 }
