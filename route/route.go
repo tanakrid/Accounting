@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"github.com/google/uuid"
 	"github.com/labstack/echo"
 	"github.com/tanakrid/accounting/transaction"
 )
@@ -14,43 +13,40 @@ func postTransaction(c echo.Context) error {
 	if err := c.Bind(record); err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
-	transaction.Add(uuid.New().String(), *record)
-	return c.JSON(http.StatusCreated, nil)
+	id := transaction.Add(*record)
+	return c.JSON(http.StatusCreated, id)
 }
 
 func getTransaction(c echo.Context) error {
 	return c.JSON(http.StatusOK, transaction.Show())
 }
 
-func getTransactionById(c echo.Context) error {
-	id := c.Param("id")
-	if id == "" {
-		return c.JSON(http.StatusBadRequest, "Can't find id path param")
-	}
-	records := transaction.Show()
-	record, has := records[id]
-	if has {
-		return c.JSON(http.StatusOK, record)
-	} else {
-		return c.JSON(http.StatusNotFound, "Not has this id:"+id)
-	}
-}
+// func getTransactionById(c echo.Context) error {
+// 	id := c.Param("id")
+// 	if id == "" {
+// 		return c.JSON(http.StatusBadRequest, "Can't find id path param")
+// 	}
+// 	records := transaction.Show()
+// 	record, has := records[id]
+// 	if has {
+// 		return c.JSON(http.StatusOK, record)
+// 	} else {
+// 		return c.JSON(http.StatusNotFound, "Not has this id:"+id)
+// 	}
+// }
 
 func putTransaction(c echo.Context) error {
-	id := c.Param("id")
-	if id == "" {
-		return c.JSON(http.StatusBadRequest, "Can't find id path param")
-	}
-	if _, has := transaction.Show()[id]; !has {
-		return c.JSON(http.StatusNotFound, "Can't edit, Not found this id:"+id)
-	}
+	// if _, has := transaction.Show()[id]; !has {
+	// 	return c.JSON(http.StatusNotFound, "Can't edit, Not found this id:"+id)
+	// }
 
 	record := &transaction.Record{}
 	fmt.Printf("record's value: %v\n", record) // test value
 	if err := c.Bind(record); err != nil {
 		return c.JSON(http.StatusBadRequest, err.Error())
 	}
-	transaction.Edit(id, *record)
+	fmt.Printf("record: %#v\n", record)
+	transaction.Edit(*record)
 	return c.JSON(http.StatusOK, nil)
 }
 
@@ -59,9 +55,9 @@ func deleteTransaction(c echo.Context) error {
 	if id == "" {
 		return c.JSON(http.StatusBadRequest, "Can't find id path param")
 	}
-	if _, has := transaction.Show()[id]; !has {
-		return c.JSON(http.StatusNotFound, "Can't delete, Not found this id:"+id)
-	}
+	// if _, has := transaction.Show()[id]; !has {
+	// 	return c.JSON(http.StatusNotFound, "Can't delete, Not found this id:"+id)
+	// }
 	transaction.Del(id)
 	return c.JSON(http.StatusOK, nil)
 }
@@ -72,10 +68,10 @@ func InitRoute() {
 	e := echo.New()
 
 	e.GET("/transaction", getTransaction)
-	e.GET("/transaction/:id", getTransactionById)
+	// e.GET("/transaction/:id", getTransactionById)
 	e.POST("/transaction", postTransaction)
 	e.DELETE("/transaction/:id", deleteTransaction)
-	e.PUT("/transaction/:id", putTransaction)
+	e.PUT("/transaction", putTransaction)
 
 	log.Println("starting... port:", port)
 	log.Fatal(e.Start(":"+port))
