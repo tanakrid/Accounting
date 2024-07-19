@@ -3,7 +3,6 @@ module github.com/tanakrid/accounting
 go 1.22.5
 
 require (
-	github.com/google/uuid v1.6.0
 	github.com/labstack/echo v3.3.10+incompatible
 	github.com/proullon/ramsql v0.1.3
 )

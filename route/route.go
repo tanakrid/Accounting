@@ -21,19 +21,14 @@ func getTransaction(c echo.Context) error {
 	return c.JSON(http.StatusOK, transaction.Show())
 }
 
-// func getTransactionById(c echo.Context) error {
-// 	id := c.Param("id")
-// 	if id == "" {
-// 		return c.JSON(http.StatusBadRequest, "Can't find id path param")
-// 	}
-// 	records := transaction.Show()
-// 	record, has := records[id]
-// 	if has {
-// 		return c.JSON(http.StatusOK, record)
-// 	} else {
-// 		return c.JSON(http.StatusNotFound, "Not has this id:"+id)
-// 	}
-// }
+func getTransactionById(c echo.Context) error {
+	id := c.Param("id")
+	if id == "" {
+		return c.JSON(http.StatusBadRequest, "Can't find id path param")
+	}
+	record := transaction.ShowById(id)
+	return c.JSON(http.StatusOK, record)
+}
 
 func putTransaction(c echo.Context) error {
 	// if _, has := transaction.Show()[id]; !has {
@@ -68,7 +63,7 @@ func InitRoute() {
 	e := echo.New()
 
 	e.GET("/transaction", getTransaction)
-	// e.GET("/transaction/:id", getTransactionById)
+	e.GET("/transaction/:id", getTransactionById)
 	e.POST("/transaction", postTransaction)
 	e.DELETE("/transaction/:id", deleteTransaction)
 	e.PUT("/transaction", putTransaction)

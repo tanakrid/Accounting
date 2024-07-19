@@ -63,6 +63,30 @@ func Show() []Record {
 	return records
 }
 
+func ShowById(id string) Record {
+	strId, err := strconv.Atoi(id)
+	if err != nil {
+		fmt.Printf("convert id error:%#v\n", err)
+		log.Fatal("convert id error:", err)
+	}
+	row := db.DB.QueryRow(`
+	SELECT id, is_expense, amount, type_name, description, date 
+	FROM transactions
+	WHERE id = ?`, strId)
+	if err != nil {
+		fmt.Printf("query error:%#v\n", err)
+		log.Fatal("query error", err)
+	}
+	record := Record{}
+	err = row.Scan(&record.Id, &record.IsExpense, 
+		&record.Amount, &record.TypeName, 
+		&record.Description, &record.Date)
+	if err != nil {
+		log.Fatal("for rows error", err)
+	}
+	return record
+}
+
 func Del(k string) {
 	log.Println("Del transaction")
 	delete := `DELETE FROM transactions WHERE id=$1;`
